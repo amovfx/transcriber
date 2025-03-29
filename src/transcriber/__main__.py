@@ -49,10 +49,18 @@ async def transcribe_file(
         language_code: Language code for transcription (default: "en")
             Supported languages: {', '.join(SUPPORTED_LANGUAGES.keys())}
         json_output_path: Optional path to save transcription result as JSON
+                          If not provided, will save to same directory as audio_path
+                          with filename "transcript.json"
 
     Returns:
         Transcribed text from the audio file
     """
+    # If json_output_path is not specified, create it in the same directory as audio_path
+    if json_output_path is None:
+        audio_file_path = Path(audio_path)
+        json_output_path = str(audio_file_path.parent / "transcript.json")
+        logger.info(f"No output path specified, using: {json_output_path}")
+
     transcript = transcriber_service.transcribe_audio(audio_path, language_code)
 
     if json_output_path:
