@@ -1,19 +1,27 @@
 """Transcriber Server MCP Service
 
-This module implements an audio transcription service using AssemblyAI.
-It provides functionality to transcribe an audio file and return the transcribed text.
+This module implements a speech-to-text transcription service for audio and video files using AssemblyAI.
+It automatically extracts and transcribes speech from various audio and video formats, creating
+human-readable text transcripts from the content.
+
+The service automatically saves transcript files in JSON format alongside the original media file
+(or at a specified location), making it easy to access the transcribed content.
 
 The service is implemented as a FastMCP server that exposes a single tool:
-- transcribe_file: Transcribes an audio file and returns its text content
+- transcribe_file: Transcribes audio/video files and saves transcripts as JSON
+
+Supported formats include:
+- Audio: MP3, WAV, M4A, FLAC, etc.
+- Video: MP4, MOV, AVI, etc.
 
 Dependencies:
     - mcp: For FastMCP server implementation
-    - transcriber API: For audio transcription functionality
+    - assemblyai: For speech-to-text transcription functionality
 
 Usage:
     Run this file directly to start the transcriber server:
     ```
-    python transcriber_server.py
+    python -m transcriber
     ```
 """
 
@@ -34,18 +42,22 @@ transcriber_service = AssemblyAIService()
 
 @mcp.tool(
     name="transcribe_file",
-    description="Transcribe an audio file and return its text content. "
-    "Supports multiple audio formats.",
+    description="Transcribe an audio or video file and return its text content. "
+    "Supports multiple media formats.",
 )
 async def transcribe_file(
     audio_path: str,
     language_code: str = DEFAULT_LANGUAGE,
     json_output_path: Optional[str] = None,
 ) -> str:
-    """Transcribe an audio file using AssemblyAI.
+    """Transcribe speech from an audio or video file using AssemblyAI.
+
+    This function extracts speech from a media file and converts it to text, saving
+    the transcription results as a JSON file. The transcript is automatically saved
+    alongside the original file if no output path is specified.
 
     Args:
-        audio_path: Path to the audio file
+        audio_path: Path to the audio or video file to transcribe
         language_code: Language code for transcription (default: "en")
             Supported languages: {', '.join(SUPPORTED_LANGUAGES.keys())}
         json_output_path: Optional path to save transcription result as JSON
@@ -53,7 +65,7 @@ async def transcribe_file(
                           with filename "transcript.json"
 
     Returns:
-        Transcribed text from the audio file
+        Transcribed text from the audio/video file
     """
     # If json_output_path is not specified, create it in the same directory as audio_path
     if json_output_path is None:
@@ -100,3 +112,24 @@ if __name__ == "__main__":  # pragma: no cover
 
     # Run the MCP server
     mcp.run(transport="stdio")
+
+
+def main():
+    """Main entry point for the transcriber service when run as a script."""
+    # Print service information
+    print("Transcriber MCP Service")
+
+    # Format supported languages
+    languages = ", ".join(
+        [f"{code} ({name})" for code, name in SUPPORTED_LANGUAGES.items()]
+    )
+    print(f"Supported languages: {languages}")
+
+    print(f"Supported formats: {', '.join(SUPPORTED_FORMATS)}")
+
+    # Run the MCP server
+    mcp.run(transport="stdio")
+
+
+if __name__ == "__main__":
+    main()

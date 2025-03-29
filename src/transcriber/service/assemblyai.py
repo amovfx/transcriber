@@ -12,7 +12,7 @@ import assemblyai as aai
 from dotenv import load_dotenv
 from loguru import logger
 
-from src.config.env import ASSEMBLYAI
+from ..config.env import ASSEMBLYAI
 
 from ..config.config import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from ..utils.file_utils import get_file_info, validate_audio_file
