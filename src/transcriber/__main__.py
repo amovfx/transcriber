@@ -81,21 +81,31 @@ async def transcribe_file(
             output_path = Path(json_output_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
+            json_data = {
+                "words": [word.model_dump() for word in transcript.words],
+                "sentences": [
+                    sentence.model_dump() for sentence in transcript.get_sentences()
+                ],
+                "paragraphs": [
+                    paragraph.model_dump() for paragraph in transcript.get_paragraphs()
+                ],
+            }
+
             # Save transcript to JSON file
             with open(json_output_path, "w", encoding="utf-8") as f:
                 json.dump(
-                    transcript,
+                    json_data,
                     f,
                     indent=2,
                 )
 
             logger.info(f"Transcription saved to {json_output_path}")
+            return {"result": "Success", "result": transcript.text}
         except Exception as e:
-            logger.error(
-                f"Failed to save transcription to {json_output_path}: {str(e)}"
-            )
+            msg = f"Failed to save transcription to {json_output_path}: {str(e)}"
+            logger.error(msg)
 
-    return transcript
+            return {"result": "Failure", "result": msg}
 
 
 if __name__ == "__main__":  # pragma: no cover
