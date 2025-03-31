@@ -82,6 +82,7 @@ async def transcribe_file(
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
             json_data = {
+                "text": transcript.text,
                 "words": [word.model_dump() for word in transcript.words],
                 "sentences": [
                     sentence.model_dump() for sentence in transcript.get_sentences()
@@ -108,20 +109,37 @@ async def transcribe_file(
             return {"result": "Failure", "result": msg}
 
 
-if __name__ == "__main__":  # pragma: no cover
-    # Print service information
-    print("Transcriber MCP Service")
+@mcp.tool(
+    name="get_transcription",
+    description="Load a JSON transcript file and return its text content.",
+)
+async def get_transcription(json_path: str) -> str:
+    """Load a previously saved transcription from a JSON file and return the text.
 
-    # Format supported languages
-    languages = ", ".join(
-        [f"{code} ({name})" for code, name in SUPPORTED_LANGUAGES.items()]
-    )
-    print(f"Supported languages: {languages}")
+    Args:
+        json_path: Path to the JSON file containing the transcription
 
-    print(f"Supported formats: {', '.join(SUPPORTED_FORMATS)}")
+    Returns:
+        The transcribed text from the JSON file
+    """
+    try:
+        # Load the JSON file
+        with open(json_path, "r", encoding="utf-8") as f:
+            transcript_data = json.load(f)
 
-    # Run the MCP server
-    mcp.run(transport="stdio")
+        # Extract the text field
+        if "text" in transcript_data:
+            logger.info(f"Successfully loaded transcription from {json_path}")
+            return transcript_data["text"]
+        else:
+            msg = f"No 'text' field found in the JSON file at {json_path}"
+            logger.error(msg)
+            return {"result": "Failure", "error": msg}
+
+    except Exception as e:
+        msg = f"Failed to load transcription from {json_path}: {str(e)}"
+        logger.error(msg)
+        return {"result": "Failure", "error": msg}
 
 
 def main():

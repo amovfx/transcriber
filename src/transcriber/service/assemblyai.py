@@ -63,7 +63,7 @@ class AssemblyAIService:
             language_code = DEFAULT_LANGUAGE
 
         # Create transcription config
-        config = aai.TranscriptionConfig(language_code=language_code)
+        config = aai.TranscriptionConfig(language_code=language_code, disfluencies=True)
         transcriber = aai.Transcriber(config=config)
 
         try:
