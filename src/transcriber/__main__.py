@@ -101,7 +101,11 @@ async def transcribe_file(
                 )
 
             logger.info(f"Transcription saved to {json_output_path}")
-            return {"result": "Success", "result": transcript.text}
+            return {
+                "result": "Success",
+                "result": transcript.text,
+                "json_output_path": json_output_path,
+            }
         except Exception as e:
             msg = f"Failed to save transcription to {json_output_path}: {str(e)}"
             logger.error(msg)
