@@ -50,7 +50,6 @@ transcriber_service = AssemblyAIService()
 async def transcribe_file(
     audio_path: str,
     language_code: str = DEFAULT_LANGUAGE,
-    json_output_path: Optional[str] = None,
 ) -> str:
     """Transcribe speech from an audio or video file using AssemblyAI.
 
@@ -69,14 +68,14 @@ async def transcribe_file(
     Returns:
         Transcribed text from the audio/video file
     """
-    return transcribe_audiofile(audio_path, language_code, json_output_path)
+    return await transcribe_audiofile(audio_path, language_code)
 
 
 @mcp.tool(
     name="get_transcription",
     description="Load a JSON transcript file and return its text content.",
 )
-async def get_transcription(json_path: str) -> str:
+async def get_transcript_text(json_path: str) -> str:
     """Load a previously saved transcription from a JSON file and return the text.
 
     Args:

@@ -14,7 +14,6 @@ transcriber_service = AssemblyAIService()
 async def transcribe_audiofile(
     audio_path: str,
     language_code: str = DEFAULT_LANGUAGE,
-    json_output_path: Optional[str] = None,
 ) -> str:
     """Transcribe speech from an audio or video file using AssemblyAI.
 
@@ -34,10 +33,9 @@ async def transcribe_audiofile(
         Transcribed text from the audio/video file
     """
     # If json_output_path is not specified, create it in the same directory as audio_path
-    if json_output_path is None:
-        audio_file_path = Path(audio_path)
-        json_output_path = str(audio_file_path.parent / "transcript.json")
-        logger.info(f"No output path specified, using: {json_output_path}")
+
+    audio_file_path = Path(audio_path)
+    json_output_path = str(audio_file_path.parent / "transcript.json")
 
     transcript = transcriber_service.transcribe_audio(audio_path, language_code)
 
