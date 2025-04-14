@@ -71,11 +71,8 @@ async def transcribe_file(
     return await transcribe_audiofile(audio_path, language_code)
 
 
-@mcp.tool(
-    name="get_transcription",
-    description="Load a JSON transcript file and return its text content.",
-)
-async def get_transcript_text(json_path: str) -> str:
+@mcp.tool()
+async def read_transcript(json_path: str) -> str:
     """Load a previously saved transcription from a JSON file and return the text.
 
     Args:
