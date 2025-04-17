@@ -63,7 +63,6 @@ async def transcribe_audiofile(
             logger.info(f"Transcription saved to {json_output_path}")
             return {
                 "result": "Success",
-                "text": transcript.text,
                 "json_output_path": json_output_path,
             }
         except Exception as e:
