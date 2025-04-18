@@ -27,7 +27,9 @@ Usage:
 
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Any
+import asyncio
+import concurrent.futures
 
 from mcp.server.fastmcp import FastMCP
 from loguru import logger
@@ -37,9 +39,6 @@ from .lib.transcribe import transcribe_audiofile
 from .config.config import DEFAULT_LANGUAGE, SUPPORTED_FORMATS, SUPPORTED_LANGUAGES
 from .service.assemblyai import AssemblyAIService
 
-# Add import for write_json_safe
-from src.utils.json_files import write_json_safe
-
 # Initialize the FastMCP server and Transcriber service
 mcp = FastMCP("transcriber")
 transcriber_service = AssemblyAIService()
@@ -47,58 +46,137 @@ transcriber_service = AssemblyAIService()
 
 @mcp.tool(
     name="transcribe_file",
-    description="Transcribe an audio or video file and return its text content. "
+    description="Transcribe an audio or video file or process files in a directory recursively and return their text content. "
     "Supports multiple media formats.",
 )
 async def transcribe_file(
-    audio_path: str,
+    input_path: str,
     language_code: str = DEFAULT_LANGUAGE,
-) -> dict:
-    """Transcribe speech from an audio or video file using AssemblyAI.
+    recursive: bool = False,
+) -> Dict[str, Any]:
+    """Transcribe speech from an audio or video file or process files in a directory using AssemblyAI.
 
-    This function extracts speech from a media file and converts it to text, saving
-    the transcription results as a JSON file. The transcript is automatically saved
-    alongside the original file if no output path is specified.
+    If input_path is a directory, finds supported media files (optionally recursively)
+    and transcribes them in parallel, saving results as JSON files.
+    If input_path is a file, transcribes that file and saves the result as JSON.
 
     Args:
-        audio_path: Path to the audio or video file to transcribe
+        input_path: Path to the audio/video file or directory to transcribe.
         language_code: Language code for transcription (default: "en")
             Supported languages: {', '.join(SUPPORTED_LANGUAGES.keys())}
-        json_output_path: Optional path to save transcription result as JSON
-                          If not provided, will save to same directory as audio_path
-                          with filename "transcript.json"
+        recursive: Whether to search for files recursively in subdirectories if input_path is a directory.
 
     Returns:
-        Dict with result, json_output_path, and error if failed
+        Dict with overall status and a list of results for each file processed.
+        Each item in the list will contain file path, status (success/failure), and json_path or error.
     """
-    try:
-        transcript_obj = await transcribe_audiofile(audio_path, language_code)
-        audio_file_path = Path(audio_path)
-        json_output_path = str(audio_file_path.parent / "transcript.json")
-        # Save using write_json_safe
-        success = write_json_safe(
-            json_output_path, transcript_obj.model_dump(), indent=2
-        )
-        if success:
-            return {"result": "Success", "json_output_path": json_output_path}
+    path_obj = Path(input_path)
+    files_to_process: List[Path] = []
+    results: List[Dict[str, Any]] = []
+
+    if path_obj.is_dir():
+        # Use rglob for mp3 files
+        if recursive:
+            files_to_process.extend(path_obj.rglob("*.mp3"))
         else:
+            files_to_process.extend(path_obj.glob("*.mp3"))
+
+        # For other supported formats, use the existing glob pattern approach
+        other_formats = [fmt for fmt in SUPPORTED_FORMATS if fmt != "mp3"]
+        patterns = [f"*.{format}" for format in other_formats]
+        if recursive:
+            patterns = [f"**/{pattern}" for pattern in patterns]
+
+        for pattern in patterns:
+            files_to_process.extend(path_obj.glob(pattern))
+
+        if not files_to_process:
             return {
-                "result": "Failure",
-                "error": f"Failed to write JSON to {json_output_path}",
+                "status": "failure",
+                "message": f"No supported media files found in {input_path}",
+                "data": [],
             }
-    except Exception as e:
-        return {"result": "Failure", "error": str(e)}
+
+    elif path_obj.is_file():
+        # Check if the single file has a supported format
+        if path_obj.suffix.lstrip(".").lower() not in SUPPORTED_FORMATS:
+            return {
+                "status": "failure",
+                "message": f"File {input_path} has an unsupported format.",
+                "data": [],
+            }
+        files_to_process.append(path_obj)
+    else:
+        return {
+            "status": "failure",
+            "message": f"Invalid input_path: {input_path} is neither a file nor a directory.",
+            "data": [],
+        }
+
+    # Create tasks for parallel transcription
+    tasks = [
+        transcribe_audiofile(str(file_path), language_code)
+        for file_path in files_to_process
+    ]
+
+    # Run tasks concurrently, allowing exceptions to be returned
+    transcription_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Process results
+    overall_status = "success"
+    for file_path, result in zip(files_to_process, transcription_results):
+        if isinstance(result, Exception):
+            overall_status = (
+                "partial_success" if overall_status == "success" else overall_status
+            )  # If any failed, overall is not pure success
+            results.append(
+                {"file": str(file_path), "status": "failure", "error": str(result)}
+            )
+        else:
+            # Assuming transcribe_audiofile returns a transcript object with a model_dump method
+            json_output_path = str(file_path.parent / "transcript.json")
+            try:
+                with open(json_output_path, "w", encoding="utf-8") as f:
+                    json.dump(result.model_dump(), f, indent=2)
+                results.append(
+                    {
+                        "file": str(file_path),
+                        "status": "success",
+                        "json_path": json_output_path,
+                    }
+                )
+            except Exception as e:
+                overall_status = (
+                    "partial_success" if overall_status == "success" else overall_status
+                )
+                results.append(
+                    {
+                        "file": str(file_path),
+                        "status": "failure",
+                        "error": f"Failed to write JSON to {json_output_path}: {e}",
+                    }
+                )
+
+    message = (
+        "Transcription complete."
+        if overall_status == "success"
+        else "Transcription complete with some failures."
+    )
+    if overall_status == "failure":
+        message = "Transcription failed for all files."
+
+    return {"status": overall_status, "message": message, "data": results}
 
 
 @mcp.tool()
-async def read_transcript(json_path: str) -> str:
+async def read_transcript(json_path: str) -> Dict[str, Any]:
     """Load a previously saved transcription from a JSON file and return the text.
 
     Args:
         json_path: Path to the JSON file containing the transcription
 
     Returns:
-        The transcribed text from the JSON file
+        Dict containing the transcribed text or an error message.
     """
     try:
         # Load the JSON file
@@ -108,16 +186,16 @@ async def read_transcript(json_path: str) -> str:
         # Extract the text field
         if "text" in transcript_data:
             logger.info(f"Successfully loaded transcription from {json_path}")
-            return transcript_data["text"]
+            return {"status": "success", "text": transcript_data["text"]}
         else:
             msg = f"No 'text' field found in the JSON file at {json_path}"
             logger.error(msg)
-            return {"result": "Failure", "error": msg}
+            return {"status": "failure", "error": msg}
 
     except Exception as e:
         msg = f"Failed to load transcription from {json_path}: {str(e)}"
         logger.error(msg)
-        return {"result": "Failure", "error": msg}
+        return {"status": "failure", "error": msg}
 
 
 def main():
