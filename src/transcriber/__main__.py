@@ -37,6 +37,9 @@ from .lib.transcribe import transcribe_audiofile
 from .config.config import DEFAULT_LANGUAGE, SUPPORTED_FORMATS, SUPPORTED_LANGUAGES
 from .service.assemblyai import AssemblyAIService
 
+# Add import for write_json_safe
+from src.utils.json_files import write_json_safe
+
 # Initialize the FastMCP server and Transcriber service
 mcp = FastMCP("transcriber")
 transcriber_service = AssemblyAIService()
@@ -50,7 +53,7 @@ transcriber_service = AssemblyAIService()
 async def transcribe_file(
     audio_path: str,
     language_code: str = DEFAULT_LANGUAGE,
-) -> str:
+) -> dict:
     """Transcribe speech from an audio or video file using AssemblyAI.
 
     This function extracts speech from a media file and converts it to text, saving
@@ -66,9 +69,25 @@ async def transcribe_file(
                           with filename "transcript.json"
 
     Returns:
-        Transcribed text from the audio/video file
+        Dict with result, json_output_path, and error if failed
     """
-    return await transcribe_audiofile(audio_path, language_code)
+    try:
+        transcript_obj = await transcribe_audiofile(audio_path, language_code)
+        audio_file_path = Path(audio_path)
+        json_output_path = str(audio_file_path.parent / "transcript.json")
+        # Save using write_json_safe
+        success = write_json_safe(
+            json_output_path, transcript_obj.model_dump(), indent=2
+        )
+        if success:
+            return {"result": "Success", "json_output_path": json_output_path}
+        else:
+            return {
+                "result": "Failure",
+                "error": f"Failed to write JSON to {json_output_path}",
+            }
+    except Exception as e:
+        return {"result": "Failure", "error": str(e)}
 
 
 @mcp.tool()
