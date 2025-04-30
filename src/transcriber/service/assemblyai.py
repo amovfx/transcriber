@@ -16,6 +16,7 @@ from ..config.env import ASSEMBLYAI
 
 from ..config.config import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from ..utils.file_utils import get_file_info, validate_audio_file
+from pathlib import Path
 
 # Load environment variables from .env file
 load_dotenv()
@@ -47,6 +48,7 @@ class AssemblyAIService:
             Transcribed text from the audio file or error message
         """
         # Validate file
+
         is_valid, error_message = validate_audio_file(audio_path)
         if not is_valid:
             return error_message

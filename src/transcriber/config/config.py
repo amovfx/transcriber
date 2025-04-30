@@ -23,11 +23,11 @@ DEFAULT_LANGUAGE = "en"
 
 # Supported audio file formats
 SUPPORTED_FORMATS = [
-    ".mp3",
-    ".mp4",
-    ".wav",
-    ".ogg",
-    ".flac",
-    ".m4a",
-    ".webm",
+    "mp3",
+    "mp4",
+    "wav",
+    "ogg",
+    "flac",
+    "m4a",
+    "webm",
 ]

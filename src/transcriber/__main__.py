@@ -103,7 +103,7 @@ async def transcribe_file(
             return {
                 "status": "failure",
                 "message": f"File {input_path} has an unsupported format.",
-                "data": [],
+                "data": path_obj.suffix.lstrip(".").lower(),
             }
         files_to_process.append(path_obj)
     else:

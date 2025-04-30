@@ -24,19 +24,19 @@ def validate_audio_file(file_path: str) -> tuple[bool, str]:
         - error_message: Empty string if valid, error message if invalid
     """
     # Check if file exists
-    if not os.path.exists(file_path):
+    if not Path(file_path).exists():
         error_msg = f"Audio file not found: {file_path}"
         logger.error(error_msg)
         return False, error_msg
 
     # Check if file is a file (not a directory)
-    if not os.path.isfile(file_path):
+    if not Path(file_path).is_file():
         error_msg = f"Path is not a file: {file_path}"
         logger.error(error_msg)
         return False, error_msg
 
     # Check file format
-    file_ext = os.path.splitext(file_path)[1].lower()
+    file_ext = Path(file_path).suffix.lstrip(".").lower()
     if file_ext not in SUPPORTED_FORMATS:
         error_msg = (
             f"Unsupported audio format: {file_ext}. "
@@ -68,7 +68,7 @@ def get_file_size(file_path: str) -> int:
         Size of the file in bytes, or 0 if the file doesn't exist
     """
     try:
-        return os.path.getsize(file_path)
+        return Path(file_path).stat().st_size
     except Exception as e:
         logger.error(f"Error getting file size for {file_path}: {str(e)}")
         return 0
@@ -101,7 +101,7 @@ def get_file_info(file_path: str) -> dict:
     except Exception as e:
         logger.error(f"Error getting file info for {file_path}: {str(e)}")
         return {
-            "name": os.path.basename(file_path),
+            "name": Path(file_path).name,
             "path": file_path,
             "error": str(e),
             "exists": False,
