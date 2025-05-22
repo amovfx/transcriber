@@ -19,7 +19,7 @@ from ..utils.file_utils import get_file_info, validate_audio_file
 from pathlib import Path
 
 # Load environment variables from .env file
-load_dotenv()
+#load_dotenv()
 
 
 class AssemblyAIService:
@@ -27,13 +27,11 @@ class AssemblyAIService:
 
     def __init__(self):
         """Initialize the transcriber service with API key from environment."""
-        api_key = ASSEMBLYAI.API_KEY
-        if not api_key:
-            raise RuntimeError("ASSEMBLYAI_API_KEY environment variable not set")
+
 
         # Initialize AssemblyAI with API key
-        aai.settings.api_key = api_key
-        logger.info("TranscriberService initialized")
+        aai.settings.api_key = ASSEMBLYAI.API_KEY_2
+        logger.info(f"TranscriberService initialized: {ASSEMBLYAI.API_KEY[:5]}...")
 
     def transcribe_audio(
         self, audio_path: str, language_code: str = DEFAULT_LANGUAGE

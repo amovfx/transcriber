@@ -44,6 +44,7 @@ mcp = FastMCP("transcriber")
 transcriber_service = AssemblyAIService()
 
 
+
 @mcp.tool(
     name="transcribe_file",
     description="Transcribe an audio or video file or process files in a directory recursively and return their text content. "
