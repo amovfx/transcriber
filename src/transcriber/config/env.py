@@ -8,7 +8,7 @@ from loguru import logger
 # Get the project root directory (3 levels up from this file)
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 
-class AssemblyAI(BaseSettings):
+class AssemblyAISettings(BaseSettings):
     API_KEY: str
     API_KEY_2: str
 
@@ -21,7 +21,7 @@ class AssemblyAI(BaseSettings):
     )
 
 
-ASSEMBLYAI = AssemblyAI()
+ASSEMBLYAI = AssemblyAISettings()
 logger.info(f"ASSEMBLYAI: {ASSEMBLYAI.API_KEY}...")
 logger.info(f"ASSEMBLYAI: {ASSEMBLYAI.API_KEY_2}...")
 logger.info(PROJECT_ROOT)
